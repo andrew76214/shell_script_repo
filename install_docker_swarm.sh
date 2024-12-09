@@ -22,8 +22,7 @@ sudo systemctl enable docker
 sudo usermod -aG docker $USER
 
 echo "已將用戶 $USER 加入 docker 群組。請登出並重新登入以使權限生效，或者手動運行以下命令使更改立即生效："
-# echo "newgrp docker"
-newgrp docker
+echo "newgrp docker"
 
 # 驗證 Docker 安裝
 docker --version
