@@ -22,7 +22,8 @@ sudo systemctl enable docker
 sudo usermod -aG docker $USER
 
 echo "已將用戶 $USER 加入 docker 群組。請登出並重新登入以使權限生效，或者手動運行以下命令使更改立即生效："
-echo "newgrp docker"
+# echo "newgrp docker"
+newgrp docker
 
 # 驗證 Docker 安裝
 docker --version
@@ -31,7 +32,8 @@ docker --version
 echo "選擇要設置的 Docker Swarm 節點類型："
 echo "1) 主節點 (Manager)"
 echo "2) 工作節點 (Worker)"
-read -p "請輸入選項 (1 或 2): " node_type
+echo "3) 主節點 (Manager) + 工作節點 (Worker)"
+read -p "請輸入選項 (1 或 2 或 3): " node_type
 
 if [ "$node_type" == "1" ]; then
     # 初始化 Docker Swarm 主節點
@@ -45,6 +47,26 @@ if [ "$node_type" == "1" ]; then
     echo "Docker Swarm 主節點安裝並初始化完成！"
 
 elif [ "$node_type" == "2" ]; then
+    # 請求加入 Swarm 的命令
+    echo "請輸入主節點提供的 Swarm 加入命令："
+    read -p "Swarm 加入命令: " join_command
+
+    # 執行加入 Swarm 命令
+    eval "$join_command"
+
+    echo "Docker Swarm 工作節點安裝並加入完成！"
+
+elif [ "$node_type" == "3" ]; then
+    # 初始化 Docker Swarm 主節點
+    echo "初始化 Docker Swarm 主節點..."
+    sudo docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
+
+    # 顯示加入 Swarm 的命令
+    echo "使用以下命令來添加其他節點到 Swarm 集群中："
+    join_command=$(sudo docker swarm join-token worker | grep 'docker swarm join')
+
+    echo "Docker Swarm 主節點安裝並初始化完成！"
+
     # 請求加入 Swarm 的命令
     echo "請輸入主節點提供的 Swarm 加入命令："
     read -p "Swarm 加入命令: " join_command
