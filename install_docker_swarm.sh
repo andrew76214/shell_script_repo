@@ -66,11 +66,7 @@ elif [ "$node_type" == "3" ]; then
     join_command=$(sudo docker swarm join-token worker | grep 'docker swarm join')
 
     echo "Docker Swarm 主節點安裝並初始化完成！"
-
-    # 請求加入 Swarm 的命令
-    echo "請輸入主節點提供的 Swarm 加入命令："
-    read -p "Swarm 加入命令: " join_command
-
+    
     # 執行加入 Swarm 命令
     eval "$join_command"
 
