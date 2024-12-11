@@ -1,0 +1,14 @@
+version: "0.1"
+
+services:
+  miniconda:
+    build:
+      context: .  # 使用當前目錄下的 Dockerfile
+      dockerfile: Dockerfile
+    image: miniconda-image  # 容器的名稱
+    container_name: miniconda-container
+    volumes:
+      - ./app:/app  # 映射本地的 /app 目錄到容器的 /app 目錄
+    restart: unless-stopped # 除非手動停止，否則重啟容器
+    stdin_open: true  # 保持標準輸入開啟
+    tty: true  # 開啟虛擬終端
