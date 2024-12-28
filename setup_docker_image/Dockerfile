@@ -1,27 +1,43 @@
-FROM ubuntu:24.04
+# 使用最新的 Ubuntu 基礎鏡像
+FROM ubuntu:latest
 
+# 設置環境變數
 ENV ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive
 
+# 更新系統並安裝必要工具
 RUN apt-get update && \
-    apt-get install -y wget bzip2 curl && \
+    apt-get install -y wget bzip2 curl openssh-server && \
     apt-get clean
 
-# 下載並安裝 Miniconda
-RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh
-RUN /bin/bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
+# 安裝 Miniconda
+RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
     rm /tmp/miniconda.sh && \
     echo "export PATH=/opt/miniconda3/bin:$PATH" > /etc/profile.d/miniconda.sh
 
+# 添加 Miniconda 到 PATH
 ENV PATH="/opt/miniconda3/bin:$PATH"
 
 # 初始化 Conda
-RUN /opt/miniconda3/bin/conda init bash
+RUN conda init bash
 
-# 指定工作目錄
+# 創建基本用戶
+RUN useradd -m -s /bin/bash devuser && \
+    echo "devuser:password123" | chpasswd && \
+    mkdir -p /home/devuser/.ssh && \
+    chown -R devuser:devuser /home/devuser/.ssh
+
+# 配置 SSH
+RUN mkdir /run/sshd && \
+    echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "AllowUsers devuser" >> /etc/ssh/sshd_config
+
+# 設置工作目錄
 WORKDIR /app
 
-# 設定默認環境為 base
-ENV CONDA_DEFAULT_ENV=base
-ENV PATH="/opt/miniconda3/bin:$PATH"
+# 切換成 non-root 使用者
+USER devuser
 
-CMD ["bash"]
+# 開啟 SSH 服務並執行 bash
+CMD ["/usr/sbin/sshd", "-D"]

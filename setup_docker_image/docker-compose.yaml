@@ -1,14 +1,60 @@
-version: "0.1"
+version: "3.8"
 
 services:
+### Main Service
   miniconda:
     build:
-      context: .  # 使用當前目錄下的 Dockerfile
+      context: .  # Dockerfile 所在目錄
       dockerfile: Dockerfile
-    image: miniconda-image  # 容器的名稱
-    container_name: miniconda-container
+    image: miniconda-image  # 自定義容器鏡像名稱
+    container_name: miniconda-container  # 容器名稱
+    ports:
+      - "2222:22"  # 映射本地 2222 端口到容器內部的 22 端口 (SSH)
     volumes:
-      - ./app:/app  # 映射本地的 /app 目錄到容器的 /app 目錄
-    restart: unless-stopped # 除非手動停止，否則重啟容器
-    stdin_open: true  # 保持標準輸入開啟
+      - ./app:/app  # 映射本地的 app 目錄到容器內部
+    restart: unless-stopped  # 除非手動停止，否則自動重啟
+    stdin_open: true  # 保持標準輸入打開
     tty: true  # 開啟虛擬終端
+    networks:
+      - app_net
+    security_opt:
+      - no-new-privileges:true  # 防止權限升級
+    read_only: true  # 將 container 的檔案系統設定為唯讀
+    tmpfs:
+      - /tmp  # 為 /tmp 掛載臨時檔案系統
+    cap_drop:
+      - ALL  # Drop all Linux capabilities
+    cap_add:
+      - NET_BIND_SERVICE  # Add only the necessary capability
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]  # Replace with an appropriate health check command
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+### VPN Server
+#  ipsec-vpn-server:
+#    image: hwdsl2/ipsec-vpn-server
+#    container_name: ipsec-vpn-server
+#    privileged: true
+#    env_file: ./vpn.env
+#    ports:
+#      - "500:500/udp"
+#      - "4500:4500/udp"
+#    volumes:
+#      - ikev2-vpn-data:/etc/ipsec.d
+#      - /lib/modules:/lib/modules:ro
+#    restart: unless-stopped
+#
+# volumes:
+#  ikev2-vpn-data:
+
+networks:
+  app_net:
+    driver: bridge
+
+# deploy:
+# resources:
+#   limits:
+#     cpus: '0.5'
+#     memory: '512M'
