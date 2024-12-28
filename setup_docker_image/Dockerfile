@@ -1,3 +1,6 @@
+# docker-compose down --rmi all --volumes --remove-orphans
+# docker-compose up --build -d
+
 # 使用最新的 Ubuntu 基礎鏡像
 FROM ubuntu:latest
 
@@ -29,15 +32,20 @@ RUN useradd -m -s /bin/bash devuser && \
 
 # 配置 SSH
 RUN mkdir /run/sshd && \
+    echo 'root:password' | chpasswd && \
     echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
+    echo "Port 22" >> /etc/ssh/sshd_config && \
     echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
     echo "AllowUsers devuser" >> /etc/ssh/sshd_config
+
+# 暴露端口 22
+EXPOSE 22
 
 # 設置工作目錄
 WORKDIR /app
 
-# 切換成 non-root 使用者
+# 切換成非 root 使用者
 USER devuser
 
-# 開啟 SSH 服務並執行 bash
+# 啟動 SSH 服務
 CMD ["/usr/sbin/sshd", "-D"]
