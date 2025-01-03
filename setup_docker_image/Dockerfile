@@ -1,51 +1,58 @@
 # docker-compose down --rmi all --volumes --remove-orphans
 # docker-compose up --build -d
 
-# 使用最新的 Ubuntu 基礎鏡像
+# Use the latest Ubuntu base image
 FROM ubuntu:latest
 
-# 設置環境變數
+# Set environment variables
 ENV ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive
 
-# 更新系統並安裝必要工具
+# Update the system and install required tools
 RUN apt-get update && \
-    apt-get install -y wget bzip2 curl openssh-server && \
+    apt-get install -y wget bzip2 curl openssh-server libpam-google-authenticator && \
     apt-get clean
 
-# 安裝 Miniconda
+# Install Miniconda
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
     /bin/bash /tmp/miniconda.sh -b -p /opt/miniconda3 && \
     rm /tmp/miniconda.sh && \
     echo "export PATH=/opt/miniconda3/bin:$PATH" > /etc/profile.d/miniconda.sh
 
-# 添加 Miniconda 到 PATH
+# Add Miniconda to PATH
 ENV PATH="/opt/miniconda3/bin:$PATH"
 
-# 初始化 Conda
+# Initialize Conda
 RUN conda init bash
 
-# 創建基本用戶
+# Create a basic user
 RUN useradd -m -s /bin/bash devuser && \
     echo "devuser:password123" | chpasswd && \
     mkdir -p /home/devuser/.ssh && \
     chown -R devuser:devuser /home/devuser/.ssh
 
-# 配置 SSH
+# Configure SSH
 RUN mkdir /run/sshd && \
     echo 'root:password' | chpasswd && \
     echo "PermitRootLogin no" >> /etc/ssh/sshd_config && \
     echo "Port 22" >> /etc/ssh/sshd_config && \
     echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
-    echo "AllowUsers devuser" >> /etc/ssh/sshd_config
+    echo "AllowUsers devuser" >> /etc/ssh/sshd_config && \
+    echo "ChallengeResponseAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "AuthenticationMethods publickey,keyboard-interactive" >> /etc/ssh/sshd_config && \
+    echo "UsePAM yes" >> /etc/ssh/sshd_config
 
-# 暴露端口 22
+# Set up Google Authenticator for devuser
+RUN echo "auth required pam_google_authenticator.so" >> /etc/pam.d/sshd && \
+    su - devuser -c "google-authenticator -t -d -f -r 3 -R 30 -W --qr-mode=NONE" < /dev/null
+
+# Expose port 22
 EXPOSE 22
 
-# 設置工作目錄
+# Set working directory
 WORKDIR /app
 
-# 切換成非 root 使用者
+# Switch to non-root user
 USER devuser
 
-# 啟動 SSH 服務
+# Start SSH service
 CMD ["/usr/sbin/sshd", "-D"]
